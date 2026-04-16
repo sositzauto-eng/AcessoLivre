@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Acesso Livre - ENEM</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="login-screen" class="screen active">
+        <div class="auth-container">
+            <img src="logo.png" alt="Acesso Livre Logo" class="app-logo">
+            
+            <h1 id="auth-title">Entrar</h1>
+            <div id="auth-form">
+                <input type="text" id="reg-name" placeholder="Nome Completo" style="display: none;">
+                <input type="email" id="auth-email" placeholder="Seu e-mail">
+                <input type="password" id="auth-pass" placeholder="Sua senha">
+                
+                <button id="btn-auth-action" class="primary-btn">Entrar</button>
+                
+                <div class="divider"><span>ou</span></div>
+                
+                <button id="btn-google" class="google-btn">
+                    <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google">
+                    <span>Entrar com conta Google</span>
+                </button>
+                
+                <p id="toggle-container">
+                    <span id="toggle-msg">Não tem uma conta?</span> 
+                    <a href="#" id="toggle-link">Cadastre-se</a>
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <div id="dashboard-screen" class="screen">
+        <header class="main-header">
+            <div class="user-info">
+                <h1>Olá, <span id="user-name">...</span>!</h1>
+            </div>
+            <button id="btn-logout" class="logout-btn">Sair</button>
+        </header>
+        <main class="dashboard-content">
+            <p class="instruction">Selecione uma área para praticar:</p>
+            <div class="grid-areas">
+                <button class="area-card" onclick="app.startQuiz('linguagens')">Linguagens</button>
+                <button class="area-card" onclick="app.startQuiz('matematica')">Matemática</button>
+                <button class="area-card" onclick="app.startQuiz('natureza')">C. Natureza</button>
+                <button class="area-card" onclick="app.startQuiz('humanas')">C. Humanas</button>
+            </div>
+        </main>
+    </div>
+
+    <div id="quiz-screen" class="screen">
+        <div class="quiz-container">
+            <div class="quiz-header">
+                <div class="progress-bar-bg">
+                    <div id="quiz-progress-bar"></div>
+                </div>
+            </div>
+            <div id="question-container">
+                <p id="question-text"></p>
+                <div id="options-list"></div>
+            </div>
+            
+            <div id="feedback-area" class="hidden">
+                <div class="feedback-content">
+                    <p id="feedback-status"></p>
+                    <p id="explanation-text"></p>
+                    <button id="btn-next" class="next-btn">Próxima Questão</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module" src="app.js"></script>
+</body>
+</html>

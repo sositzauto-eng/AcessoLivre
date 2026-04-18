@@ -12,6 +12,16 @@ const INITIAL_PROGRESS = {
     humanas:     { currentIndex: 0, correctCount: 0, completed: false, score: 0 }
 };
 
+// Extrai um nome amigável do e-mail: "joao.silva@gmail.com" → "Joao Silva"
+function nomeDoEmail(email) {
+    const prefix = email.split('@')[0];                    // "joao.silva"
+    return prefix
+        .replace(/[._\-+]/g, ' ')                          // "joao silva"
+        .replace(/\s+/g, ' ')
+        .trim()
+        .replace(/\b\w/g, c => c.toUpperCase());           // "Joao Silva"
+}
+
 export const AuthService = {
     auth,
 
@@ -28,8 +38,10 @@ export const AuthService = {
             const userSnap = await getDoc(userRef);
 
             if (!userSnap.exists()) {
+                // Usa o displayName do Google; fallback para e-mail
+                const nome = user.displayName || nomeDoEmail(user.email);
                 await setDoc(userRef, {
-                    nome: user.displayName || 'Usuário',
+                    nome,
                     email: user.email,
                     criadoEm: new Date().toISOString(),
                     progress: { ...INITIAL_PROGRESS },
@@ -48,8 +60,12 @@ export const AuthService = {
     async signUp(email, password, name) {
         const credential = await createUserWithEmailAndPassword(auth, email, password);
         const user = credential.user;
+
+        // Prioridade: campo "nome" preenchido → extraído do e-mail
+        const nome = (name && name.trim()) ? name.trim() : nomeDoEmail(email);
+
         await setDoc(doc(db, "usuarios", user.uid), {
-            nome: name || 'Usuário',
+            nome,
             email,
             criadoEm: new Date().toISOString(),
             progress: { ...INITIAL_PROGRESS },
@@ -69,6 +85,13 @@ export const AuthService = {
         return await signOut(auth);
     },
 
+    // ── ATUALIZAR NOME (corrige contas antigas com "Usuário") ─────
+    async updateUserName(uid, nome) {
+        try {
+            await updateDoc(doc(db, "usuarios", uid), { nome });
+        } catch (e) { console.warn("updateUserName:", e); }
+    },
+
     // ── CARREGAR DADOS DO USUÁRIO ─────────────────────────────────
     async loadUserData(uid) {
         const userRef  = doc(db, "usuarios", uid);
@@ -78,14 +101,14 @@ export const AuthService = {
 
         const data = userSnap.data();
 
-        // Migração: garante que o campo progress existe para contas antigas
+        // Migração: garante campo progress para contas antigas
         if (!data.progress) {
             await updateDoc(userRef, {
                 progress: { ...INITIAL_PROGRESS },
                 allCompleted: false,
                 totalScore: 0
             });
-            data.progress    = { ...INITIAL_PROGRESS };
+            data.progress     = { ...INITIAL_PROGRESS };
             data.allCompleted = false;
             data.totalScore   = 0;
         }
@@ -95,16 +118,14 @@ export const AuthService = {
 
     // ── SALVAR PROGRESSO DE UMA ÁREA ─────────────────────────────
     async saveProgress(uid, area, progressData) {
-        const userRef = doc(db, "usuarios", uid);
-        await updateDoc(userRef, {
+        await updateDoc(doc(db, "usuarios", uid), {
             [`progress.${area}`]: progressData
         });
     },
 
     // ── SALVAR NOTAS FINAIS (CADERNO COMPLETO) ────────────────────
     async saveScores(uid, progressObj, totalScore) {
-        const userRef = doc(db, "usuarios", uid);
-        await updateDoc(userRef, {
+        await updateDoc(doc(db, "usuarios", uid), {
             progress: progressObj,
             allCompleted: true,
             totalScore
@@ -113,8 +134,7 @@ export const AuthService = {
 
     // ── REINICIAR TODO O PROGRESSO ────────────────────────────────
     async resetProgress(uid) {
-        const userRef = doc(db, "usuarios", uid);
-        await updateDoc(userRef, {
+        await updateDoc(doc(db, "usuarios", uid), {
             progress: { ...INITIAL_PROGRESS },
             allCompleted: false,
             totalScore: 0
@@ -133,14 +153,13 @@ export const AuthService = {
 
             users.push({
                 uid:            d.id,
-                nome:           data.nome || 'Usuário',
+                nome:           data.nome || nomeDoEmail(data.email || 'usuario'),
                 totalScore:     data.totalScore || 0,
                 allCompleted:   data.allCompleted || false,
                 completedAreas
             });
         });
 
-        // Ordena: quem concluiu tudo primeiro, depois por nota, depois por áreas concluídas
         users.sort((a, b) => {
             if (b.allCompleted !== a.allCompleted) return b.allCompleted - a.allCompleted;
             if (b.totalScore   !== a.totalScore)   return b.totalScore   - a.totalScore;

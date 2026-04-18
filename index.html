@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+    <title>Acesso Livre — Simulado ENEM</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════════════════
+     CONTROLES DE ACESSIBILIDADE (sempre visíveis)
+════════════════════════════════════════════════════════════ -->
+<div id="accessibility-bar">
+    <button id="btn-font-dec"  class="font-btn" aria-label="Diminuir fonte">A−</button>
+    <span   id="font-display"  class="font-label">16px</span>
+    <button id="btn-font-inc"  class="font-btn" aria-label="Aumentar fonte">A+</button>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════════
+     TELA 1 — LOGIN / CADASTRO
+════════════════════════════════════════════════════════════ -->
+<div id="login-screen" class="screen active">
+    <div class="login-bg">
+        <div class="login-card">
+            <img src="logo.png" alt="Acesso Livre" class="auth-logo">
+            <h1 id="auth-title" class="auth-heading">Bem-vindo de volta</h1>
+            <p class="auth-sub">Seu simulado ENEM personalizado</p>
+
+            <div class="auth-form">
+                <div class="input-wrap" id="wrap-name" style="display:none">
+                    <label class="input-label">Nome Completo</label>
+                    <input type="text" id="reg-name" class="input-field" placeholder="Como quer ser chamado?">
+                </div>
+                <div class="input-wrap">
+                    <label class="input-label">E-mail</label>
+                    <input type="email" id="auth-email" class="input-field" placeholder="seu@email.com">
+                </div>
+                <div class="input-wrap">
+                    <label class="input-label">Senha</label>
+                    <input type="password" id="auth-pass" class="input-field" placeholder="••••••••">
+                </div>
+
+                <button id="btn-auth-action" class="btn-primary">Entrar</button>
+
+                <div class="auth-divider"><span>ou continue com</span></div>
+
+                <button id="btn-google" class="btn-google">
+                    <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" width="20">
+                    Entrar com Google
+                </button>
+
+                <p class="auth-toggle">
+                    <span id="toggle-msg">Não tem uma conta?</span>&nbsp;
+                    <a href="#" id="toggle-link">Cadastre-se</a>
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════════
+     TELA 2 — DASHBOARD
+════════════════════════════════════════════════════════════ -->
+<div id="dashboard-screen" class="screen">
+
+    <!-- Header -->
+    <header class="dash-header">
+        <div class="dash-header-left">
+            <img src="logo.png" alt="AL" class="dash-logo">
+            <div>
+                <p class="dash-greeting">Olá, <strong id="user-name">...</strong> 👋</p>
+                <p id="overall-progress" class="overall-progress">0/4 áreas concluídas</p>
+            </div>
+        </div>
+        <button id="btn-logout" class="btn-icon-logout" title="Sair">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+                <polyline points="16 17 21 12 16 7"/>
+                <line x1="21" y1="12" x2="9" y2="12"/>
+            </svg>
+        </button>
+    </header>
+
+    <!-- Banner nota total -->
+    <div id="nota-banner" class="nota-banner" style="display:none">
+        <span class="nota-label">—</span>
+        <span class="nota-value">—</span>
+        <span class="nota-sub">—</span>
+    </div>
+
+    <!-- Grid de áreas -->
+    <main class="dash-main">
+        <h2 class="section-title">Caderno de Questões</h2>
+
+        <div class="areas-grid">
+
+            <!-- LINGUAGENS -->
+            <div class="area-card lang" id="card-linguagens">
+                <div class="card-lock" style="display:none">🔒</div>
+                <div class="card-top">
+                    <span class="card-icon">📚</span>
+                    <span class="card-score"></span>
+                </div>
+                <h3 class="card-title">Linguagens</h3>
+                <p  class="card-status-label">0/45 questões</p>
+                <div class="card-progress-track">
+                    <div class="card-progress-fill lang-fill"></div>
+                </div>
+                <button class="card-btn" onclick="app.startQuiz('linguagens')">→ Iniciar</button>
+            </div>
+
+            <!-- MATEMÁTICA -->
+            <div class="area-card math" id="card-matematica">
+                <div class="card-lock" style="display:none">🔒</div>
+                <div class="card-top">
+                    <span class="card-icon">🔢</span>
+                    <span class="card-score"></span>
+                </div>
+                <h3 class="card-title">Matemática</h3>
+                <p  class="card-status-label">0/45 questões</p>
+                <div class="card-progress-track">
+                    <div class="card-progress-fill math-fill"></div>
+                </div>
+                <button class="card-btn" onclick="app.startQuiz('matematica')">→ Iniciar</button>
+            </div>
+
+            <!-- C. NATUREZA -->
+            <div class="area-card sci" id="card-natureza">
+                <div class="card-lock" style="display:none">🔒</div>
+                <div class="card-top">
+                    <span class="card-icon">🔬</span>
+                    <span class="card-score"></span>
+                </div>
+                <h3 class="card-title">C. Natureza</h3>
+                <p  class="card-status-label">0/45 questões</p>
+                <div class="card-progress-track">
+                    <div class="card-progress-fill sci-fill"></div>
+                </div>
+                <button class="card-btn" onclick="app.startQuiz('natureza')">→ Iniciar</button>
+            </div>
+
+            <!-- C. HUMANAS -->
+            <div class="area-card hum" id="card-humanas">
+                <div class="card-lock" style="display:none">🔒</div>
+                <div class="card-top">
+                    <span class="card-icon">🌍</span>
+                    <span class="card-score"></span>
+                </div>
+                <h3 class="card-title">C. Humanas</h3>
+                <p  class="card-status-label">0/45 questões</p>
+                <div class="card-progress-track">
+                    <div class="card-progress-fill hum-fill"></div>
+                </div>
+                <button class="card-btn" onclick="app.startQuiz('humanas')">→ Iniciar</button>
+            </div>
+
+        </div><!-- /areas-grid -->
+
+        <!-- Botão reiniciar (apenas quando tudo concluído) -->
+        <button id="btn-reset-all" class="btn-reset" style="display:none">
+            ↺ Reiniciar Caderno Completo
+        </button>
+
+    </main>
+
+    <!-- Bottom Nav -->
+    <nav class="bottom-nav">
+        <button class="bnav-btn bnav-active" onclick="app.showScreen('dashboard-screen')">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+            <span>Início</span>
+        </button>
+        <button class="bnav-btn" id="btn-my-scores">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+            <span>Minhas Notas</span>
+        </button>
+        <button class="bnav-btn" id="btn-ranking">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20V10"/><path d="M18 20V4"/><path d="M6 20v-6"/></svg>
+            <span>Ranking</span>
+        </button>
+    </nav>
+
+</div><!-- /dashboard-screen -->
+
+
+<!-- ═══════════════════════════════════════════════════════════
+     TELA 3 — QUIZ
+════════════════════════════════════════════════════════════ -->
+<div id="quiz-screen" class="screen">
+    <div class="quiz-wrapper">
+
+        <!-- Topo -->
+        <div class="quiz-topbar">
+            <button id="btn-back" class="btn-back-quiz">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+            </button>
+            <span id="quiz-area-title" class="quiz-area-title">Linguagens</span>
+            <span id="quiz-counter"   class="quiz-counter-badge">1 / 45</span>
+        </div>
+
+        <!-- Barra de progresso -->
+        <div class="quiz-progress-track">
+            <div id="quiz-progress-bar" class="quiz-bar-fill lang" style="width:0%"></div>
+        </div>
+
+        <!-- Conteúdo scrollável -->
+        <div id="quiz-scroll" class="quiz-scroll">
+
+            <!-- Pergunta -->
+            <div class="question-card">
+                <p id="question-text" class="question-text">Carregando...</p>
+            </div>
+
+            <!-- Alternativas -->
+            <div id="options-list" class="options-list"></div>
+
+            <!-- Feedback -->
+            <div id="feedback-area" class="feedback-card hidden">
+                <div class="fb-header">
+                    <span id="feedback-icon"   class="fb-icon">✓</span>
+                    <span id="feedback-status" class="fb-title">Resposta Correta!</span>
+                </div>
+                <p id="explanation-text" class="fb-explanation"></p>
+                <button id="btn-next" class="btn-next">Próxima Questão →</button>
+            </div>
+
+        </div><!-- /quiz-scroll -->
+    </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════════
+     TELA 4 — MINHAS NOTAS
+════════════════════════════════════════════════════════════ -->
+<div id="scores-screen" class="screen">
+    <header class="sub-header">
+        <button id="btn-back-scores" class="btn-back-sub">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+        </button>
+        <h2 class="sub-header-title">Minhas Notas</h2>
+        <div style="width:36px"></div>
+    </header>
+
+    <div class="scores-body">
+
+        <div class="scores-intro">
+            <p class="scores-intro-text">Suas notas são calculadas no modelo ENEM</p>
+            <p class="scores-intro-range">(escala de 300 a 950 pontos)</p>
+        </div>
+
+        <!-- Linha por área -->
+        <div class="scores-list">
+
+            <div class="score-row" id="scores-row-linguagens">
+                <div class="score-row-left">
+                    <span class="score-icon lang-text">📚</span>
+                    <div>
+                        <span class="score-area-name">Linguagens</span>
+                        <div class="score-bar-track"><div id="scores-bar-linguagens" class="score-bar-fill lang-fill" style="width:0%"></div></div>
+                    </div>
+                </div>
+                <span id="scores-val-linguagens" class="score-value">—</span>
+            </div>
+
+            <div class="score-row" id="scores-row-matematica">
+                <div class="score-row-left">
+                    <span class="score-icon math-text">🔢</span>
+                    <div>
+                        <span class="score-area-name">Matemática</span>
+                        <div class="score-bar-track"><div id="scores-bar-matematica" class="score-bar-fill math-fill" style="width:0%"></div></div>
+                    </div>
+                </div>
+                <span id="scores-val-matematica" class="score-value">—</span>
+            </div>
+
+            <div class="score-row" id="scores-row-natureza">
+                <div class="score-row-left">
+                    <span class="score-icon sci-text">🔬</span>
+                    <div>
+                        <span class="score-area-name">C. Natureza</span>
+                        <div class="score-bar-track"><div id="scores-bar-natureza" class="score-bar-fill sci-fill" style="width:0%"></div></div>
+                    </div>
+                </div>
+                <span id="scores-val-natureza" class="score-value">—</span>
+            </div>
+
+            <div class="score-row" id="scores-row-humanas">
+                <div class="score-row-left">
+                    <span class="score-icon hum-text">🌍</span>
+                    <div>
+                        <span class="score-area-name">C. Humanas</span>
+                        <div class="score-bar-track"><div id="scores-bar-humanas" class="score-bar-fill hum-fill" style="width:0%"></div></div>
+                    </div>
+                </div>
+                <span id="scores-val-humanas" class="score-value">—</span>
+            </div>
+
+        </div><!-- /scores-list -->
+
+        <!-- Nota final -->
+        <div class="scores-total-card">
+            <span class="scores-total-label">Nota Geral ENEM</span>
+            <span id="scores-total" class="scores-total-value">—</span>
+            <span class="scores-total-hint">Média das 4 áreas • Conclua o caderno</span>
+        </div>
+
+    </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════════
+     TELA 5 — RANKING
+════════════════════════════════════════════════════════════ -->
+<div id="ranking-screen" class="screen">
+    <header class="sub-header">
+        <button id="btn-back-ranking" class="btn-back-sub">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+        </button>
+        <h2 class="sub-header-title">🏆 Ranking</h2>
+        <div style="width:36px"></div>
+    </header>
+
+    <div class="ranking-body">
+        <p class="ranking-subtitle">Classificação geral dos estudantes</p>
+        <div id="ranking-list" class="ranking-list">
+            <div class="ranking-loading"><span class="spinner"></span> Carregando...</div>
+        </div>
+    </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════════
+     MODAL — ÁREA CONCLUÍDA
+════════════════════════════════════════════════════════════ -->
+<div id="area-complete-modal" class="modal-overlay hidden">
+    <div class="modal-card">
+        <div class="ac-ring" id="ac-ring"></div>
+        <span id="ac-icon" class="ac-icon">📚</span>
+        <p  class="ac-label">Área Concluída</p>
+        <h2 id="ac-area"  class="ac-area-name">Linguagens</h2>
+        <div class="ac-score-block">
+            <span id="ac-score" class="ac-score-number">0</span>
+            <span class="ac-score-unit">pontos</span>
+        </div>
+        <p id="ac-fraction" class="ac-fraction">0 de 45 corretas</p>
+        <p id="ac-level"    class="ac-level">Bom!</p>
+        <button id="ac-btn-ok" class="btn-primary" style="margin-top:1.5rem">
+            Continuar →
+        </button>
+    </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════════
+     MODAL — CADERNO COMPLETO 🏆
+════════════════════════════════════════════════════════════ -->
+<div id="all-complete-modal" class="modal-overlay hidden">
+    <div class="modal-card allc-card">
+        <div class="allc-confetti">🎉</div>
+        <h2 class="allc-title">Caderno Completo!</h2>
+        <p  class="allc-sub">Você concluiu todas as áreas do ENEM</p>
+
+        <div class="allc-total-block">
+            <span class="allc-total-label">Nota Geral</span>
+            <span id="allc-total" class="allc-total-score">0</span>
+            <span id="allc-level" class="allc-total-level">—</span>
+        </div>
+
+        <div class="allc-scores-grid">
+            <div class="allc-item lang"><span class="allc-item-icon">📚</span><span class="allc-item-name">Linguagens</span><span id="allc-linguagens" class="allc-item-score">0</span></div>
+            <div class="allc-item math"><span class="allc-item-icon">🔢</span><span class="allc-item-name">Matemática</span><span id="allc-matematica" class="allc-item-score">0</span></div>
+            <div class="allc-item sci"><span class="allc-item-icon">🔬</span><span class="allc-item-name">Natureza</span><span id="allc-natureza" class="allc-item-score">0</span></div>
+            <div class="allc-item hum"><span class="allc-item-icon">🌍</span><span class="allc-item-name">Humanas</span><span id="allc-humanas" class="allc-item-score">0</span></div>
+        </div>
+
+        <div class="allc-btns">
+            <button id="allc-btn-ranking"   class="btn-primary">Ver Ranking 🏆</button>
+            <button id="allc-btn-dashboard" class="btn-ghost">Voltar ao Início</button>
+        </div>
+    </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════════
+     MODAL — CONFIRMAR REINÍCIO
+════════════════════════════════════════════════════════════ -->
+<div id="confirm-modal" class="modal-overlay hidden">
+    <div class="modal-card confirm-card">
+        <span class="confirm-icon">🔄</span>
+        <h3 class="confirm-title">Reiniciar Caderno?</h3>
+        <p class="confirm-text">
+            Isso apagará todo o seu progresso atual e zerará o contador de questões de todas as áreas.
+            Suas notas no ranking serão mantidas.
+        </p>
+        <div class="confirm-btns">
+            <button id="confirm-yes" class="btn-danger">Sim, reiniciar</button>
+            <button id="confirm-no"  class="btn-ghost">Cancelar</button>
+        </div>
+    </div>
+</div>
+
+
+<script type="module" src="app.js"></script>
+</body>
+</html>

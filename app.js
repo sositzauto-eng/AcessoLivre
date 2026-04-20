@@ -15,7 +15,7 @@ const app = {
         window.location.hostname === '127.0.0.1'
     )
         ? 'http://localhost:8000'
-        : 'https://acesso-livre-backend.railway.internal',   // TROQUE APOS O DEPLOY
+        : 'https://acesso-livre-backend-production.up.railway.app',   // TROQUE APOS O DEPLOY
 
     // ── Cache local de questoes (evita chamadas repetidas na sessao) ──
     _questionsCache: {},

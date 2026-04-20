@@ -1,12 +1,30 @@
 import { AuthService } from './auth.js';
 import { DuelService  } from './duel.js';
-import { questions }    from './questions.js';
+// questions.js e' o fallback offline — fonte principal e' a API Python
 
 /* ═══════════════════════════════════════════════════════════
-   ACESSO LIVRE — app.js
-   v3 — Duelo 1v1 + Compartilhamento de Resultado
+   ACESSO LIVRE — app.js v4
+   Backend Python: TRI scoring, Gemini AI, Anti-Cheat
 ════════════════════════════════════════════════════════════ */
 const app = {
+
+    // ── URL da API Python no Railway ──────────────────────────────
+    // Apos o deploy no Railway, troque a URL abaixo
+    API_URL: (
+        window.location.hostname === 'localhost' ||
+        window.location.hostname === '127.0.0.1'
+    )
+        ? 'http://localhost:8000'
+        : 'https://acesso-livre-backend.railway.internal',   // TROQUE APOS O DEPLOY
+
+    // ── Cache local de questoes (evita chamadas repetidas na sessao) ──
+    _questionsCache: {},
+
+    // ── Respostas da sessao atual (para anti-cheat e TRI) ─────────
+    _sessionAnswers:      [],  // [{correct, response_time_ms, suspicion}]
+    _questionStartTime:   0,   // timestamp ao exibir cada questao
+    _consecutiveFast:     0,   // contador de respostas rapidas seguidas
+    _sessionCorrect:      0,   // acertos validados na sessao
 
     // ── Estado Global ─────────────────────────────────────────────
     currentUser:      null,
@@ -83,6 +101,57 @@ const app = {
         }
     },
 
+    // ══════════════════════════════════════════════════════════════
+    //  API — busca questões do backend Python
+    // ══════════════════════════════════════════════════════════════
+    async getQuestions(area) {
+        // 1. Cache da sessão (evita chamar a API várias vezes)
+        if (this._questionsCache[area]?.length) {
+            return this._questionsCache[area];
+        }
+
+        // 2. Tenta a API Python no Railway
+        try {
+            const resp = await fetch(`${this.API_URL}/questions/${area}?limit=45`);
+            if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+            const data = await resp.json();
+    if (data.questions?.length) {
+                this._questionsCache[area] = data.questions;
+                return data.questions;
+            }
+        } catch (e) {
+            console.warn(`[API] Falha ao buscar questões para '${area}':`, e.message);
+            this.toast(`Carregando questões offline para ${this.AREA_META[area]?.label}...`, 'info');
+        }
+
+        // 3. Fallback: questions.js (importado dinamicamente)
+        try {
+            const mod = await import('./questions.js');
+            const qs  = mod.questions?.[area] || [];
+            if (qs.length) {
+                this._questionsCache[area] = qs;
+                return qs;
+            }
+        } catch (e) {
+            console.warn('[fallback] questions.js indisponível:', e.message);
+        }
+
+        return [];
+    },
+
+    // Busca análise de pontos fracos da API Python
+    async fetchWeaknessAnalysis(area) {
+        if (!this.currentUser) return null;
+        try {
+            const resp = await fetch(`${this.API_URL}/analysis/${this.currentUser.uid}/${area}`);
+            if (!resp.ok) return null;
+            return await resp.json();
+        } catch (e) {
+            console.warn('[API] Análise de pontos fracos indisponível:', e.message);
+            return null;
+        }
+    },
+
     nomeDoEmail(email) {
         const prefix = (email || '').split('@')[0];
         return prefix
@@ -126,7 +195,7 @@ const app = {
 
         this.AREAS.forEach(area => {
             const data  = progress[area] || { currentIndex: 0, correctCount: 0, completed: false, score: 0 };
-            const total = questions[area]?.length || 45;
+            const total = this._questionsCache[area]?.length || 45;
             const card  = document.getElementById(`card-${area}`);
             if (!card) return;
 
@@ -191,7 +260,8 @@ const app = {
     //  QUIZ NORMAL
     // ══════════════════════════════════════════════════════════════
     async startQuiz(area) {
-        if (!questions[area]?.length) { this.toast('Área não disponível.', 'warn'); return; }
+        const qs = await this.getQuestions(area);
+        if (!qs?.length) { this.toast('Área não disponível.', 'warn'); return; }
 
         const progress     = this.userData?.progress || {};
         const areaData     = progress[area] || {};
@@ -207,7 +277,11 @@ const app = {
         }
 
         this.currentArea      = area;
-        this.currentQuestions = questions[area];
+        this.currentQuestions = qs;
+        this._sessionAnswers  = [];
+        this._sessionCorrect  = 0;
+        this._consecutiveFast = 0;
+
         const saved           = this.userData?.progress?.[area] || {};
         this.currentIndex     = saved.completed ? 0 : (saved.currentIndex || 0);
         this.correctCount     = saved.completed ? 0 : (saved.correctCount || 0);
@@ -235,6 +309,8 @@ const app = {
 
         document.getElementById('question-text').textContent = q.pergunta;
         document.getElementById('feedback-area').classList.add('hidden');
+        this._questionStartTime = Date.now(); // anti-cheat timing
+        this._questionStartTime = Date.now(); // anti-cheat: marca inicio da questao
 
         const list = document.getElementById('options-list');
         list.innerHTML = '';
@@ -252,10 +328,51 @@ const app = {
 
     async checkAnswer(escolha, questao, botao) {
         document.querySelectorAll('.option-btn').forEach(b => b.disabled = true);
-        const isCorrect = escolha === questao.correta;
+        const responseTimeMs = Date.now() - (this._questionStartTime || Date.now());
+        const isCorrect      = escolha === questao.correta;
+
+        // Envia para API Python: anti-cheat + log + explicacao por IA
+        let aiExplanation = null;
+        let validadoPelaAPI = false;
+        try {
+            const resp = await fetch(`${this.API_URL}/answer`, {
+                method:  'POST',
+                headers: {'Content-Type': 'application/json'},
+                body:    JSON.stringify({
+                    uid:                 this.currentUser?.uid || 'anon',
+                    area:                this.currentArea,
+                    question_id:         `${this.currentArea}_${this.currentIndex}`,
+                    answer:              escolha,
+                    correct_answer:      questao.correta,
+                    is_correct:          isCorrect,
+                    response_time_ms:    responseTimeMs,
+                    question_data:       questao,
+                    consecutive_fast:    this._consecutiveFast  || 0,
+                    session_correct_pct: this._sessionAnswers.length > 0
+                        ? this._sessionCorrect / this._sessionAnswers.length : 0.5,
+                    total_answered:      this._sessionAnswers.length + 1,
+                }),
+            });
+            if (resp.ok) {
+                const data = await resp.json();
+                validadoPelaAPI = true;
+                if (!data.accepted) {
+                    this.toast('Resposta muito rápida! Leia com atenção.', 'warn');
+                }
+                this._consecutiveFast = (data.suspicion === 'warning' || data.suspicion === 'suspicious')
+                    ? (this._consecutiveFast || 0) + 1 : 0;
+                if (data.ai_explanation) aiExplanation = data.ai_explanation;
+                if (isCorrect && data.effective_correct) this.correctCount++;
+            }
+        } catch (_) { /* API offline — funciona normalmente */ }
+
+        if (!validadoPelaAPI && isCorrect) this.correctCount++;
+
+        this._sessionAnswers.push({ correct: isCorrect, response_time_ms: responseTimeMs });
+        if (isCorrect) this._sessionCorrect = (this._sessionCorrect || 0) + 1;
+
         if (isCorrect) {
             botao.classList.add('opt-correct');
-            this.correctCount++;
             document.getElementById('feedback-icon').textContent   = '✓';
             document.getElementById('feedback-icon').className     = 'fb-icon fb-correct';
             document.getElementById('feedback-status').textContent = 'Resposta Correta!';
@@ -271,7 +388,8 @@ const app = {
                     b.classList.add('opt-correct');
             });
         }
-        document.getElementById('explanation-text').textContent = questao.explicacao.correta;
+        document.getElementById('explanation-text').textContent =
+            aiExplanation || questao.explicacao?.correta || '';
         document.getElementById('feedback-area').classList.remove('hidden');
 
         this._syncProgress(this.currentArea, {
@@ -290,7 +408,30 @@ const app = {
 
     async finishQuiz() {
         const total = this.currentQuestions.length;
-        const score = this.calcScore(this.correctCount, total);
+
+        // Calcula nota via TRI no Python (seguro, nao hackavel)
+        let score = this.calcScore(this.correctCount, total); // fallback JS
+        try {
+            const responses = this._sessionAnswers.map(a => a.correct);
+            // Preenche com false se nao respondeu todas (retomada de progresso)
+            while (responses.length < total) responses.push(false);
+            const resp = await fetch(`${this.API_URL}/score`, {
+                method:  'POST',
+                headers: {'Content-Type': 'application/json'},
+                body:    JSON.stringify({
+                    uid:       this.currentUser?.uid || 'anonymous',
+                    area:      this.currentArea,
+                    responses: responses,
+                }),
+            });
+            if (resp.ok) {
+                const data = await resp.json();
+                score = data.score || score;
+            }
+        } catch (e) {
+            console.warn('[score] API indisponivel, usando calculo local:', e.message);
+        }
+
         const completedAreaData = { currentIndex: total, correctCount: this.correctCount, completed: true, score };
 
         await this._syncProgress(this.currentArea, completedAreaData);
@@ -327,7 +468,8 @@ const app = {
         this.closeModal('duel-setup-modal');
 
         const nome    = this.userData?.nome || this.nomeDoEmail(this.currentUser.email);
-        const allQ    = questions[area];
+        const allQ    = await this.getQuestions(area);
+        if (!allQ?.length) { this.toast('Questões indisponíveis. Tente novamente.', 'warn'); return; }
         const indices = this._randomIndices(allQ.length, 10);
 
         try {
@@ -359,7 +501,8 @@ const app = {
             this.duelId        = duelId;
             this.isDuelCreator = false;
             const area         = data.area;
-            this.duelQuestions = data.questionIndices.map(i => questions[area][i]);
+            const duelAllQ    = await this.getQuestions(area);
+            this.duelQuestions = data.questionIndices.map(i => duelAllQ[i]).filter(Boolean);
             this.duelIndex     = 0;
             this.duelCorrect   = 0;
 
@@ -846,7 +989,7 @@ const app = {
                 row.classList.remove('score-row-pending');
             } else {
                 const answered = data.currentIndex || 0;
-                const total    = questions[area]?.length || 45;
+                const total    = this._questionsCache[area]?.length || 45;
                 if (scoreEl) scoreEl.textContent = `${answered}/${total}`;
                 if (barEl)   barEl.style.width   = Math.round(answered / total * 100) + '%';
                 row.classList.add('score-row-pending');
@@ -867,7 +1010,7 @@ const app = {
                     area,
                     score:   data.score,
                     correct: data.correctCount,
-                    total:   questions[area]?.length || 45
+                    total:   this._questionsCache[area]?.length || 45
                 });
             } else {
                 btn.style.display = 'none';
@@ -964,7 +1107,7 @@ const app = {
                     area:    bestArea,
                     score:   progress[bestArea]?.score || 0,
                     correct: progress[bestArea]?.correctCount || 0,
-                    total:   questions[bestArea]?.length || 45
+                    total:   this._questionsCache[bestArea]?.length || 45
                 });
             };
         }
